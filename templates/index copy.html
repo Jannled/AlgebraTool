@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<link rel="stylesheet" href="style.css">
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.2.0/math.js"
+		integrity="sha512-SewEag0kt1xsJdbfAXgLyLvYXeAoGEla4M6JSitT6ocJVI+VeUbFXkgrbloNn4cVgq46caRf31un2eoalq6YOw=="
+		crossorigin="anonymous"></script>
+	<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.2.0/math.min.js" integrity="sha512-5ch7MAn3LJHCHL6ri6nmXAyaQRHfmug70F7IwEQ41rnNQSGAMVyZBPTTKlaptPnq/42RXbKb/lTHm+mCQc6lPg==" crossorigin="anonymous"></script> -->
+
+	<script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+	<script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+
+	<style>
+		h1 {
+			font-size: 20pt;
+			margin-top: 0;
+		}
+
+		h2 {
+			font-size: 16pt;
+		}
+
+		h3 {
+			font-size: 14pt;
+		}
+
+		h4 {
+			font-size: 12pt;
+		}
+
+		section section {
+			margin-left: 5mm;
+		}
+
+		body {
+			font-family: "Segoe UI", sans-serif;
+		}
+
+		table,
+		th,
+		td {
+			/* border: 1px solid gray; */
+			border-collapse: collapse;
+		}
+
+		td,
+		th {
+			padding: 2mm;
+		}
+
+		input[type=number] {
+			height: 10em;
+		}
+
+		body {
+			background-color: #333;
+		}
+
+		article {
+			background-color: aliceblue;
+			max-width: 30cm;
+			margin: 1cm auto;
+			padding: 1cm;
+			border-top: 12px solid darkturquoise; /* burlywood */
+		}
+
+		input {
+			width: 10cm;
+		}
+
+		input, button {
+			padding: 0.4em;
+		}
+
+		td input {
+			width: 1cm;
+		}
+	</style>
+</head>
+
+<body>
+	<article>
+		<h1>Eigenwert/Eigenvektor</h1>
+		<table id="ewevMat"></table>
+
+		<button onclick="calculateEwEv()">Calculate Ew and Ev</button>
+		<div id="result"></div>
+	</article>
+
+	<article>
+		<h1>Funktion berechnen</h1>
+		<input id="calcInput" type="text" placeholder="Enter expression, e.g. (1-2i)^4" oninput="calculateComplex()">
+		<button onclick="calculateComplex()">Berechnen</button>
+
+		<div>Eingabe: <span id="calcPretty"></span></div>
+		<div>Ergebniss: <span id="calcResult"></span></div>
+
+	</article>
+
+	<article>
+		<h1>Ringe über die Ganzen Zahlen  \(\mathbb{Z}_P\)</h1>
+		<input id="polynInput" type="text" placeholder="Enter expression, e.g. (1-2i)^4" oninput="polynomialFactorisation(this.value)">
+		<button onclick="polynomialFactorisation()">Berechnen</button>
+		
+		<div>Ergebniss: <span id="polynResult"></span></div>
+
+		<table id="ringTable"></table>
+	</article>
+
+	<!-- Parts that are important for everything -->
+	<script>
+		const mj = function (tex) {
+			return MathJax.tex2svg(tex, { em: 16, ex: 6, display: false });
+		}
+
+		math.config({
+			number: 'BigNumber',	// Default type of number:
+									// 'number' (default), 'BigNumber', or 'Fraction'
+			precision: 64			// Number of significant digits for BigNumbers
+		})
+	</script>
+
+	<!-- Eigenvalue / Eigenvektor -->
+	<script>
+		var ewevMat = [];
+
+		function calculateEwEv() {
+			let mat = [];
+			for (let r = 0; r < ewevMat.length; r++) {
+				mat[r] = [];
+
+				for (let c = 0; c < ewevMat[0].length; c++)
+					mat[r][c] = Number(ewevMat[r][c].value);
+			}
+
+			var xhttp = new XMLHttpRequest();
+			xhttp.onreadystatechange = function () {
+				if (this.readyState == 4 && this.status == 200) {
+					let cont = document.getElementById("result");
+					cont.innerHTML = '';
+					cont.appendChild(mj(xhttp.responseText));
+				}
+			};
+			xhttp.open("POST", "/ewev", true);
+			xhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+			xhttp.send(JSON.stringify(mat));
+		}
+
+		function createMat(rows = 3, cols = 3) {
+			let table = document.getElementById('ewevMat');
+
+			for (let r = 0; r < rows; r++) {
+				ewevMat[r] = [];
+
+				let tr = document.createElement('tr');
+				table.appendChild(tr);
+
+				for (let c = 0; c < cols; c++) {
+					let td = document.createElement('td');
+					tr.appendChild(td);
+					ewevMat[r][c] = document.createElement('input');
+					ewevMat[r][c].value = r * cols + c;
+					ewevMat[r][c].addEventListener('click', function () {
+						ewevMat[r][c].value = '';
+					});
+					td.appendChild(ewevMat[r][c]);
+				}
+			}
+		}
+
+		createMat();
+
+	</script>
+
+	<!-- Expression evaluator (https://mathjs.org/examples/browser/pretty_printing_with_mathjax.html.html) -->
+	<script>
+		let expr = document.getElementById('calcInput');
+		let pretty = document.getElementById('calcPretty');
+		let result = document.getElementById('calcResult');
+
+		function calculateComplex() {
+			let node = null;
+
+			try {
+				// parse the expression
+				node = math.parse(expr.value);
+
+				// evaluate the result of the expression
+				result.innerHTML = math.format(node.compile().evaluate(), {notation: 'auto', lowerExp: -15, upperExp: 15, precision: 15});
+			}
+			catch (err) {
+				result.innerHTML = '<span style="color: red;">' + err.toString() + '</span>';
+			}
+
+			try {
+				// export the expression to LaTeX
+				const latex = node ? node.toTex({ parenthesis: 'keep', implicit: 'hide'}) : '';
+				console.log('LaTeX expression:', latex);
+
+				// display and re-render the expression
+				MathJax.typesetClear();
+				pretty.innerHTML = '';
+				pretty.appendChild(mj(latex));
+			}
+			catch (err) { console.error(err) }
+		}
+
+	</script>
+
+	<!-- Ring over integers -->
+	<script>
+		let domain = 7;
+
+		populateTable(domain);
+
+		function polynomialFactorisation(expression = document.getElementById('polynInput').value)
+		{
+			let result = document.getElementById('polynResult');
+
+			const add      = (a, b) => (a + b) % domain;
+			const subtract = (a, b) => (a - b) % domain;
+			const multiply = (a, b) => (a * b) % domain;
+			const divide   = (a, b) => (a / b) % domain;
+			const pow      = (a, b) => math.pow(a, b) % domain;
+
+			let ringMath = math.create(math.evaluateDependencies);
+			ringMath.import({ add, subtract, multiply, divide }, { override: true })
+
+			try {
+				let nullstellen = [];
+				// evaluate the result of the expression
+				for(let val=0; val<=domain; val++)
+				{
+					let res = ringMath.evaluate(expression);
+					if(res == 0)
+						nullstellen.push(val);
+					
+					console.log(`${expression} mit x=${val}: ${res}`); // DEBUG
+				}
+				
+				result.innerHTML = nullstellen;
+			}
+			catch (err) {
+				result.innerHTML = '<span style="color: red;">' + err.toString() + '</span>';
+			}
+		}
+
+		function populateTable()
+		{
+			let table = document.getElementById('ringTable');
+			table.innerHTML = '';
+
+			let theadRow = document.createElement('tr');
+			table.appendChild(theadRow);
+			for(let i=0; i<=domain; i++)
+			{
+				let e = document.createElement('th');
+				e.innerHTML = i==0 ? '<svg style="vertical-align: -0.188ex;" xmlns="http://www.w3.org/2000/svg" width="1.76ex" height="1.507ex" role="img" viewBox="0 -583 778 666" xmlns:xlink="http://www.w3.org/1999/xlink" aria-hidden="true"><defs><path id="MJX-2-TEX-N-2299" d="M56 250Q56 394 156 488T384 583Q530 583 626 485T722 250Q722 110 625 14T390 -83Q249 -83 153 14T56 250ZM682 250Q682 322 649 387T546 497T381 542Q272 542 184 459T95 250Q95 132 178 45T389 -42Q515 -42 598 45T682 250ZM311 250Q311 285 332 304T375 328Q376 328 382 328T392 329Q424 326 445 305T466 250Q466 217 445 195T389 172Q354 172 333 195T311 250Z"></path></defs><g stroke="currentColor" fill="currentColor" stroke-width="0" transform="matrix(1 0 0 -1 0 0)"><g data-mml-node="math"><g data-mml-node="mo"><use xlink:href="#MJX-2-TEX-N-2299"></use></g></g></g></svg>'
+				 : i;
+				theadRow.appendChild(e);
+			}
+
+			for(let i=1; i<=domain; i++)
+			{
+				let tr = document.createElement('tr');
+				table.appendChild(tr);
+
+				let e = document.createElement('th');
+				e.innerText = i;
+				tr.appendChild(e);
+
+				for(let j=1; j<=domain; j++)
+				{
+					let td = document.createElement('td');
+					td.innerText = (i*j)%domain;
+					tr.appendChild(td);
+				}
+				
+			}
+		}
+	</script>
+</body>
+
+</html>

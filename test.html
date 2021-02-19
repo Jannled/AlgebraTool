@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.2.0/math.js"
+        integrity="sha512-SewEag0kt1xsJdbfAXgLyLvYXeAoGEla4M6JSitT6ocJVI+VeUbFXkgrbloNn4cVgq46caRf31un2eoalq6YOw=="
+        crossorigin="anonymous">
+    </script>
+    <!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.2.0/math.min.js" integrity="sha512-5ch7MAn3LJHCHL6ri6nmXAyaQRHfmug70F7IwEQ41rnNQSGAMVyZBPTTKlaptPnq/42RXbKb/lTHm+mCQc6lPg==" crossorigin="anonymous"></script> -->
+
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+</head>
+<body>
+    <script>
+        
+
+        // custom implementations of all functions you want to support
+        const add = (a, b) => a + b
+        const subtract = (a, b) => a - b
+        const multiply = (a, b) => a * b
+        const divide = (a, b) => a / b
+
+        // create a mathjs instance with hardly any functions
+        // there are some functions created which are used internally by evaluate though,
+        // for example by the Unit class which has dependencies on addScalar, subtract,
+        // multiplyScalar, etc.
+        const ringMath = math.create(math.evaluateDependencies)
+
+        // import your own functions
+        ringMath.import({ add, subtract, multiply, divide }, { override: true })
+
+        console.log(ringMath.evaluate('15')) // 14
+
+
+    </script>
+</body>
+</html>
