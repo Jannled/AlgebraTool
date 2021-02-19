@@ -112,7 +112,7 @@
 		<input id="polynInput" type="text" placeholder="Enter Polynomial factors, e.g. 1, 9, 5, 8, 5, 5" oninput="polynomialFactorisation(this.value)">
 		<button onclick="polynomialFactorisation()">Berechnen</button>
 		
-		<div>Eingabe: <span id="polynPretty"></span></div>
+		<div>Zwischenschritte: <ol id="polynIntermezzo"></ol></div>
 		<div>Ergebniss: <span id="polynResult"></span></div>
 
 		<table id="ringTable"></table>
@@ -226,68 +226,82 @@
 
 		function polynomialFactorisation(argFaktors = document.getElementById('polynInput').value)
 		{
-			let pretty = document.getElementById('polynPretty');
-			pretty.innerHTML = '';
-			let prettyText = ''
-
-			// Extract factors from input
-			let args = argFaktors.split(',');
-			let values = [];
-
-			for(let i=0; i<args.length; i++)
-			{
-				let num = Number(args[i].trim());
-				values.push(num);
-				if(i > 0) prettyText += num < 0 ? '' : '+'; // Sign will be added by number, no minus needed
-				prettyText += (num != 1 ? num : '') + (args.length-i > 1 ? 'x' + (args.length-i > 2 ? ('^' + (args.length-i-1)) : '') : '');
-			}
-
-			pretty.appendChild(mj(prettyText));
-
-			console.log(values);
-		}
-
-		function polynomialFactorisation2(expression = document.getElementById('polynInput').value)
-		{
-			let result = document.getElementById('polynResult');
-
+			// Define Integer ring
 			const add      = (a, b) => (a + b) % domain
 			const subtract = (a, b) => (a - b) % domain
 			const multiply = (a, b) => (a * b) % domain
 			const divide   = (a, b) => (a / b) % domain
 			const pow      = (a, b) => math.pow(a, b) % domain
-
-			// create a mathjs instance with hardly any functions
-			// there are some functions created which are used internally by evaluate though,
-			// for example by the Unit class which has dependencies on addScalar, subtract,
-			// multiplyScalar, etc.
 			const ringMath = math.create(math.evaluateDependencies)
-
-			// import your own functions
 			ringMath.import({ add, subtract, multiply, divide, pow }, { override: true })
 
-			nullstellen = [];
+			let intermediateSpan = document.getElementById('polynIntermezzo');
+			intermediateSpan.innerHTML = '';
+			let resultSpan = document.getElementById('polynResult');
 
-			try {
-				for(let i=0; i<domain; i++)
+			// Extract factors from input
+			let args = argFaktors.split(',');
+			let values = [];
+			for(arg of args)
+				values.push(Number(arg.trim()));
+
+			console.log('Polynom factor input: ' + values); // DEBUG
+
+			let factors = values;
+			let roots = [];
+			// Find all roots
+			for(let i=0; i<values.length-1; i++)
+			{
+				// Guess root
+				let stringrep = polyString(factors);
+				let root = 0;
+
+				for(; root < domain; root++)
 				{
-					let erg = ringMath.evaluate(expression.toLowerCase(), {x: i});
-
-					
-					if(erg == 0) // f(erg) = 0 --> Found a root
-					{
-						nullstellen.push(i);
-					}
-						
-
-					console.log(`${expression} mit x=${i}: ${erg}`); // DEBUG
+					if(ringMath.evaluate(stringrep, {x: root}) == 0) 
+						break;
 				}
 
-				result.innerHTML = nullstellen;
+				// Push found root to list
+				roots.push(root);
+
+				// Print intermediate step
+				let li = document.createElement('li');
+				li.appendChild(mj(`${stringrep} = 0 \\text{ ,     Nullstelle } x_${i}= ${root}`))
+				intermediateSpan.appendChild(li);
+
+				// Horner-Schema
+				let hornerResult = [factors[0]];
+				for(let x=1; x<factors.length; x++)
+					hornerResult[x] = (hornerResult[x-1] * root + factors[x]) % domain;
+
+				// Sanity check Horner result
+				if(hornerResult[hornerResult.length-1] != 0)
+				{
+					console.error("Horner scheme didn't produce 0 for x" + i + ", value was: " + hornerResult[hornerResult.length-1]);
+					resultSpan.innerHTML = '<span style="color: red;">Ungültiges Ergebnis im Horner Schema: ' + hornerResult[hornerResult.length-1] + '</span>';
+					//return;
+				}
+
+				factors = hornerResult.slice(0, -1);
 			}
-			catch (err) {
-				result.innerHTML = '<span style="color: red;">' + err.toString() + '</span>';
+
+			// Display solutions:
+			resultSpan.textContent = roots;
+		}
+
+		/** Creates a human readable string from polynomial factors (actually also feeded to Math.js) */
+		function polyString(factors)
+		{
+			let prettyText = '';
+
+			for(let i=0; i<factors.length; i++)
+			{
+				if(i > 0) prettyText += factors[i] < 0 ? '' : '+'; // Sign will be added by number, no minus needed
+				prettyText += (factors[i] != 1 ? factors[i] : '') + (factors.length-i > 1 ? 'x' + (factors.length-i > 2 ? ('^' + (factors.length-i-1)) : '') : '');
 			}
+
+			return prettyText;
 		}
 
 		function populateTable()
