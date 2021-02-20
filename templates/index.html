@@ -69,6 +69,10 @@
 			padding-bottom: 1mm;
 		}
 
+		label {
+			margin-right: 1cm;
+		}
+
 		input[type=number] {
 			height: 10em;
 		}
@@ -93,8 +97,12 @@
 			padding: 0.4em;
 		}
 
-		td input {
+		.matInput {
 			width: 1cm;
+		}
+
+		.vecInput {
+			width: 3cm;
 		}
 	</style>
 </head>
@@ -106,7 +114,8 @@
 
 		<button onclick="calculateEwEv()">Calculate Ew and Ev</button>
 		<hr>
-		<div id="result"></div>
+		<span style="font-size: 20pt; float: right; color: coral;" title="(Eigenwert, Anzahl, [Eigenvektor])">?</span>
+		<div id="result" style="min-height: 1cm;"></div> 
 	</article>
 
 	<article>
@@ -136,6 +145,36 @@
 		<table id="ringTable"></table>
 	</article>
 
+	<article>
+		<h1>Zentral- / Parallelprojektion</h1>
+
+		<label>\(\vec{a} := (\)
+			<input class="vecInput" id="vecA" placeholder="z.B. 3, -1, 14"> <!-- für Zentral 0, 1, 2 -->
+			\()^T\)
+		</label> 
+		<label>\(\vec{b} := (\)
+			<input class="vecInput" id="vecB" placeholder="1, -1, 3"> <!-- für Zentral 1, -1, 0 -->
+			\()^T\)
+		</label> 
+
+		<label>\(\vec{c} := (\)
+			<input class="vecInput" id="vecC" placeholder="-1, 2, -1"> <!-- für Zentral -1, 2, 1 -->
+			\()^T\)
+		</label> 
+
+
+		<label>\(\vec{x} := (\)
+			<input class="vecInput" id="vecX" placeholder="1, 2, 3"> <!-- für Zentral 1, 2, 3 -->
+			\()^T\)
+		</label> <br><br>
+		<button onclick="calculateParallel('parallel')">Berechne Parallelprojektion</button>
+		<button onclick="calculateParallel('zentral')">Berechne Zentralprojektion</button>
+		<hr>
+		
+		<div>Eingabe: <ul id="parallelEingabe"></ul></div>
+		<div>Ergebniss: <ul id="parallelResult"></ul></div>
+	</article>
+
 	<!-- Parts that are important for everything -->
 	<script>
 		const mj = function (tex) {
@@ -147,6 +186,16 @@
 									// 'number' (default), 'BigNumber', or 'Fraction'
 			precision: 64			// Number of significant digits for BigNumbers
 		})
+
+		function vecToTex(mat, ) 
+		{
+			let out = '\\begin{pmatrix}';
+
+			for(let i=0; i<mat.length; i++)
+				out += mat[i] + (i<mat.length-1 ? '\\\\' : '');
+
+			return out + '\\end{pmatrix}';
+		}
 	</script>
 
 	<!-- Eigenvalue / Eigenvektor -->
@@ -188,6 +237,7 @@
 					let td = document.createElement('td');
 					tr.appendChild(td);
 					ewevMat[r][c] = document.createElement('input');
+					ewevMat[r][c].classList.add('matInput');
 					ewevMat[r][c].value = r * cols + c;
 					ewevMat[r][c].addEventListener('click', function () {
 						ewevMat[r][c].value = '';
@@ -215,7 +265,7 @@
 				node = math.parse(expr.value);
 
 				// evaluate the result of the expression
-				result.innerHTML = math.format(node.compile().evaluate(), {notation: 'auto', lowerExp: -15, upperExp: 15, precision: 15});
+				result.innerHTML = math.format(node.compile().evaluate(), {notation: 'auto', lowerExp: -12, upperExp: 12, precision: 12});
 			}
 			catch (err) {
 				result.innerHTML = '<span style="color: red;">' + err.toString() + '</span>';
@@ -375,6 +425,79 @@
 					tr.appendChild(td);
 				}
 			}
+		}
+	</script>
+
+	<!-- Parallelprojektion -->
+	<script>
+		function calculateParallel(zentralParallel)
+		{
+			let inputUi = document.getElementById('parallelEingabe');
+			let outputUi = document.getElementById('parallelResult');
+
+			let vecA = [];
+			let vecB = [];
+			let vecC = [];
+			let vecX = [];
+
+			// Create vectors from input
+			document.getElementById('vecA').value.split(',').forEach(e => vecA.push(Number(e.trim())));
+			document.getElementById('vecB').value.split(',').forEach(e => vecB.push(Number(e.trim())));
+			document.getElementById('vecC').value.split(',').forEach(e => vecC.push(Number(e.trim())));
+			document.getElementById('vecX').value.split(',').forEach(e => vecX.push(Number(e.trim())));
+
+			inputUi.innerHTML = '';
+			if(zentralParallel == 'parallel')
+				inputUi.appendChild(mj(`\\alpha ${vecToTex(vecA)} + \\beta ${vecToTex(vecB)} = \\vec{x} + \\gamma ${vecToTex(vecC)} \\text{ ,  mit } \\vec{x} := ${vecToTex(vecX)}`));
+			else if(zentralParallel == 'zentral')
+				inputUi.appendChild(mj(`\\alpha ${vecToTex(vecA)} + \\beta ${vecToTex(vecB)} = \\vec{x} + \\gamma \\left(${vecToTex(vecC)} - \\vec{x} \\right) \\text{ ,  mit } \\vec{x} := ${vecToTex(vecX)}`));
+
+			
+			if(zentralParallel == 'parallel')
+			{
+				var A = [
+					[math.bignumber(vecA[0]), math.bignumber(vecB[0]), math.bignumber(-vecC[0])],
+					[math.bignumber(vecA[1]), math.bignumber(vecB[1]), math.bignumber(-vecC[1])],
+					[math.bignumber(vecA[2]), math.bignumber(vecB[2]), math.bignumber(-vecC[2])],
+				];
+			}
+			else if(zentralParallel == 'zentral')
+			{
+				var A = [
+					[math.bignumber(vecA[0]), math.bignumber(vecB[0]), math.bignumber(vecX[0]-vecC[0])],
+					[math.bignumber(vecA[1]), math.bignumber(vecB[1]), math.bignumber(vecX[1]-vecC[1])],
+					[math.bignumber(vecA[2]), math.bignumber(vecB[2]), math.bignumber(vecX[2]-vecC[2])],
+				];
+			}
+			
+
+			let b = [math.bignumber(vecX[0]), math.bignumber(vecX[1]), math.bignumber(vecX[2])];
+
+			let result = math.lusolve(A, b);
+
+			let gamma = math.format(result[2][0], {notation: 'auto', lowerExp: -16, upperExp: 16, precision: 16});
+
+			let liA = document.createElement('li');
+			let liB = document.createElement('li');
+			let liC = document.createElement('li');
+			let liP = document.createElement('li');
+
+			outputUi.innerHTML = '';
+			outputUi.appendChild(liA);
+			outputUi.appendChild(liB);
+			outputUi.appendChild(liC);
+			outputUi.appendChild(liP);
+
+			liA.appendChild(mj(`\\alpha = ${math.format(result[0][0], {notation: 'auto', lowerExp: -16, upperExp: 16, precision: 16})}`));
+			liB.appendChild(mj(`\\beta = ${math.format(result[1][0], {notation: 'auto', lowerExp: -16, upperExp: 16, precision: 16})}`));
+			liC.appendChild(mj(`\\gamma = ${gamma}`));
+
+			if(zentralParallel == 'parallel')
+				var vecP = math.add(vecX, math.multiply(vecC, gamma));
+			else if(zentralParallel == 'zentral')
+				var vecP = math.add(vecX, math.multiply(math.subtract(vecC, vecX), gamma));
+
+			liP.appendChild(mj('\\vec{p} = ' + vecToTex(vecP)));
 		}
 	</script>
 </body>
