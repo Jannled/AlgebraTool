@@ -149,26 +149,26 @@
 		<h1>Zentral- / Parallelprojektion</h1>
 
 		<label>\(\vec{a} := (\)
-			<input class="vecInput" id="vecA" placeholder="z.B. 3, -1, 14"> <!-- für Zentral 0, 1, 2 -->
+			<input class="vecInput" id="vecA" tabindex="1000" placeholder="z.B. 3, -1, 14"> <!-- für Zentral 0, 1, 2 -->
 			\()^T\)
 		</label> 
 		<label>\(\vec{b} := (\)
-			<input class="vecInput" id="vecB" placeholder="1, -1, 3"> <!-- für Zentral 1, -1, 0 -->
+			<input class="vecInput" id="vecB" tabindex="1001" placeholder="1, -1, 3"> <!-- für Zentral 1, -1, 0 -->
 			\()^T\)
 		</label> 
 
 		<label>\(\vec{c} := (\)
-			<input class="vecInput" id="vecC" placeholder="-1, 2, -1"> <!-- für Zentral -1, 2, 1 -->
+			<input class="vecInput" id="vecC" tabindex="1002" placeholder="-1, 2, -1"> <!-- für Zentral -1, 2, 1 -->
 			\()^T\)
 		</label> 
 
 
 		<label>\(\vec{x} := (\)
-			<input class="vecInput" id="vecX" placeholder="1, 2, 3"> <!-- für Zentral 1, 2, 3 -->
+			<input class="vecInput" id="vecX" tabindex="1003" placeholder="1, 2, 3"> <!-- für Zentral 1, 2, 3 -->
 			\()^T\)
 		</label> <br><br>
-		<button onclick="calculateParallel('parallel')">Berechne Parallelprojektion</button>
-		<button onclick="calculateParallel('zentral')">Berechne Zentralprojektion</button>
+		<button onclick="calculateParallel('parallel')" tabindex="1004">Berechne Parallelprojektion</button>
+		<button onclick="calculateParallel('zentral')" tabindex="1005">Berechne Zentralprojektion</button>
 		<hr>
 		
 		<div>Eingabe: <ul id="parallelEingabe"></ul></div>
