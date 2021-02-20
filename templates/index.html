@@ -33,8 +33,10 @@
 			font-size: 12pt;
 		}
 
-		section section {
-			margin-left: 5mm;
+		hr {
+			border-top: 1px solid #ddd;
+			border-bottom: none;
+			margin: 5mm 0;
 		}
 
 		body {
@@ -54,8 +56,17 @@
 			padding: 2mm;
 		}
 
+		td {
+			text-align: center;
+		}
+
 		tr:hover {
 			background-color: aquamarine;
+		}
+
+		li {
+			padding-top: 1mm;
+			padding-bottom: 1mm;
 		}
 
 		input[type=number] {
@@ -94,6 +105,7 @@
 		<table id="ewevMat"></table>
 
 		<button onclick="calculateEwEv()">Calculate Ew and Ev</button>
+		<hr>
 		<div id="result"></div>
 	</article>
 
@@ -102,6 +114,7 @@
 		<input id="calcInput" type="text" placeholder="Enter expression, e.g. (1-2i)^4" oninput="calculateComplex()">
 		<button onclick="calculateComplex()">Berechnen</button>
 
+		<hr>
 		<div>Eingabe: <span id="calcPretty"></span></div>
 		<div>Ergebniss: <span id="calcResult"></span></div>
 
@@ -109,12 +122,17 @@
 
 	<article>
 		<h1>Ringe über die Ganzen Zahlen  \(\mathbb{Z}_P\)</h1>
-		<input id="polynInput" type="text" placeholder="Enter Polynomial factors, e.g. 1, 9, 5, 8, 5, 5" oninput="polynomialFactorisation(this.value)">
-		<button onclick="polynomialFactorisation()">Berechnen</button>
-		
-		<div>Zwischenschritte: <ol id="polynIntermezzo"></ol></div>
-		<div>Ergebniss: <span id="polynResult"></span></div>
 
+		<label>\(\mathbb{Z}_P\) P= <input id="z_p" type="number" value="11" oninput="populateTable()" style="font-size: 12pt; width: 2cm; height: 5mm;"></label> <br><br>
+
+		<input id="polynInput" type="text" placeholder="Enter Polynomial factors, e.g. 1, 9, 5, 8, 5, 5" oninput="polynomialFactorisation(this.value)">
+		<button onclick="polynomialFactorisation()">Berechnen</button>	
+
+		<hr>
+		<div>Zwischenschritte: <ol id="polynIntermezzo"></ol></div>
+		<div>Ergebniss: <ul id="polynResult"></ul></div>
+
+		<hr>
 		<table id="ringTable"></table>
 	</article>
 
@@ -226,6 +244,8 @@
 
 		function polynomialFactorisation(argFaktors = document.getElementById('polynInput').value)
 		{
+			domain = Number(document.getElementById('z_p').value);
+
 			// Define Integer ring
 			const add      = (a, b) => (a + b) % domain
 			const subtract = (a, b) => (a - b) % domain
@@ -247,9 +267,9 @@
 
 			console.log('Polynom factor input: ' + values); // DEBUG
 
+			// Find all roots
 			let factors = values;
 			let roots = [];
-			// Find all roots
 			for(let i=0; i<values.length-1; i++)
 			{
 				// Guess root
@@ -258,8 +278,14 @@
 
 				for(; root < domain; root++)
 				{
-					if(ringMath.evaluate(stringrep, {x: root}) == 0) 
-						break;
+					try {
+						if(ringMath.evaluate(stringrep, {x: root}) == 0) 
+							break;
+					} catch(err) {
+						console.error(err.toString());
+						resultSpan.innerHTML = '<span style="color: red;">' + err.toString() + '</span>';
+						return;
+					}
 				}
 
 				// Push found root to list
@@ -283,11 +309,22 @@
 					//return;
 				}
 
+				// Set horner result as new input for next iteration
 				factors = hornerResult.slice(0, -1);
 			}
 
 			// Display solutions:
-			resultSpan.textContent = roots;
+			resultSpan.innerHTML = '';
+			let tr1 = document.createElement('li');
+			resultSpan.appendChild(tr1);
+			tr1.appendChild(mj(`f(x) = 0 \\text{ } \\forall \\text{ } x \\in \\left[${roots}\\right]`));
+			
+			let polyfakto = '';
+			for(let i=0; i<roots.length; i++)
+				polyfakto += (i>0 ? '*' : '') + (roots[i]!=0 ? '(' : '') + 'x' + (roots[i]<0 ? '+' : '') + (roots[i]!=0 ? -roots[i] : '') + (roots[i]!=0 ? ')' : '');
+			let tr2 = document.createElement('li')
+			tr2.innerText = polyfakto;
+			resultSpan.appendChild(tr2);
 		}
 
 		/** Creates a human readable string from polynomial factors (actually also feeded to Math.js) */
@@ -297,8 +334,9 @@
 
 			for(let i=0; i<factors.length; i++)
 			{
+				if(factors[i] == 0) continue;
 				if(i > 0) prettyText += factors[i] < 0 ? '' : '+'; // Sign will be added by number, no minus needed
-				prettyText += (factors[i] != 1 ? factors[i] : '') + (factors.length-i > 1 ? 'x' + (factors.length-i > 2 ? ('^' + (factors.length-i-1)) : '') : '');
+				prettyText += ((factors[i] == 1 && factors.length-i > 1) ? '' : factors[i]) + (factors.length-i > 1 ? 'x' + (factors.length-i > 2 ? ('^' + (factors.length-i-1)) : '') : '');
 			}
 
 			return prettyText;
@@ -306,6 +344,8 @@
 
 		function populateTable()
 		{
+			domain = Number(document.getElementById('z_p').value);
+
 			let table = document.getElementById('ringTable');
 			table.innerHTML = '';
 
@@ -334,7 +374,6 @@
 					td.innerText = (i*j)%domain;
 					tr.appendChild(td);
 				}
-				
 			}
 		}
 	</script>
